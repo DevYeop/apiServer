@@ -3,11 +3,16 @@ package org.scoula.security.config;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j;
 import org.mybatis.spring.annotation.MapperScan;
+import org.scoula.security.filter.AuthenticationErrorFilter;
+import org.scoula.security.filter.JwtAuthenticationFilter;
 import org.scoula.security.filter.JwtUsernamePasswordAuthenticationFilter;
+import org.scoula.security.handler.CustomAccessDeniedHandler;
+import org.scoula.security.handler.CustomAuthenticationEntryPoint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -34,11 +39,18 @@ import org.springframework.web.filter.CorsFilter;
 @RequiredArgsConstructor
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-    private final UserDetailsService userDetailsService;
+
+    private final AuthenticationErrorFilter authenticationErrorFilter;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    private final CustomAccessDeniedHandler accessDeniedHandler;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+
 
     @Autowired
     private JwtUsernamePasswordAuthenticationFilter jwtUsernamePasswordAuthenticationFilter;
 
+    private final UserDetailsService userDetailsService;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -56,10 +68,24 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Override
     public void configure(HttpSecurity http) throws Exception {
 
+
+        // 스ㅜ프링 시큐리티에서 지정한 필터를 기준으로면 끼워넣을 수 있음
         // 한글 인코딩 필터 설정
 //        http.addFilterBefore(encodingFilter(), CsrfFilter.class)
+
+
         http.addFilterBefore(encodingFilter(), CsrfFilter.class)
+
+                // 인증 에러 필터
+                .addFilterBefore(authenticationErrorFilter, UsernamePasswordAuthenticationFilter.class)
+
+
+                // Jwt 인증 필터
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+
+
                 // 로그인 인증 필터
+
                 .addFilterBefore(jwtUsernamePasswordAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         http.httpBasic().disable() // 기본 HTTP 인증 비활성화
@@ -67,11 +93,19 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .formLogin().disable() // formLogin 비활성화 관련 필터 해제
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS); // 세션 생성 모드 설정
 
+        http
+                .exceptionHandling()
+                .authenticationEntryPoint(authenticationEntryPoint)
+                .accessDeniedHandler(accessDeniedHandler);
+
         // 경로별 접근 권한 설정
-//        http.authorizeRequests()
-//                .antMatchers("/security/all").permitAll()
-//                .antMatchers("/security/admin").access("hasRole('ROLE_ADMIN')")
-//                .antMatchers("/security/member").access("hasRole('ROLE_MEMBER')");
+        http
+                .authorizeRequests() // 경로별 접근 권한 설정
+                .antMatchers(HttpMethod.OPTIONS).permitAll()
+                .antMatchers("/api/security/all").permitAll() // 모두 허용
+                .antMatchers("/api/security/member").access("hasRole('ROLE_MEMBER')") // ROLE_MEMBER 이상 접근 허용
+                .antMatchers("/api/security/admin").access("hasRole('ROLE_ADMIN')") // ROLE_ADMIN 이상 접근 허용
+                .anyRequest().authenticated(); // 나머지는 로그인 된 경우 모두 허용
 //
 //        http.formLogin()
 //                .loginPage("/security/login") // Get 리다이렉트
