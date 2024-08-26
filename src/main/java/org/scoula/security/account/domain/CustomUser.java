@@ -9,7 +9,7 @@ import java.util.Collection;
 
 @Getter
 @Setter
-public class CustomUser extends User {
+public class CustomUser extends User { // 확장
     private MemberVO member; // 실질적인 사용자 데이터
 
     public CustomUser(String username, String password,

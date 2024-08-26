@@ -25,6 +25,6 @@ public class CustomUserDetailsService implements UserDetailsService {
         if (vo == null) {
             throw new UsernameNotFoundException(username + "은 없는 id입니다.");
         }
-        return new CustomUser(vo);
+        return new CustomUser(vo); // SecurityContext == context : 맥락,  상황 상태
     }
 }

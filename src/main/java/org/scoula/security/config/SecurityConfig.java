@@ -39,7 +39,6 @@ import org.springframework.web.filter.CorsFilter;
 @RequiredArgsConstructor
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-
     private final AuthenticationErrorFilter authenticationErrorFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
